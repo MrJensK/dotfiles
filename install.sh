@@ -13,7 +13,10 @@ sudo apt-get install -y \
     gcc \
     libx11-dev \
     libxinerama-dev \
-    libxcursor-dev
+    libxcursor-dev \
+    xorg \
+    xinit
+    \
 
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
@@ -58,6 +61,48 @@ else
 fi
 
 echo ""
-echo "Done. Add to ~/.xinitrc to start:"
-echo "    sxbar &"
-echo "    exec sxwm"
+echo "==> Konfigurering av ~/.xinitrc"
+echo ""
+
+# Fråga om rensning
+read -p "Vill du rensa gammal konfiguration från ~/.xinitrc? (j/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Jj]$ ]]; then
+    echo "Rensar gammal konfiguration..."
+    # Backa upp befintlig xinitrc
+    if [ -f "$HOME/.xinitrc" ]; then
+        cp "$HOME/.xinitrc" "$HOME/.xinitrc.bak"
+        echo "    Backup skapad: ~/.xinitrc.bak"
+    fi
+    # Skapa ny xinitrc
+    cat > "$HOME/.xinitrc" << 'EOF'
+#!/bin/bash
+# Stänga av skärmarna efter 5 min
+xset s 300 300
+xset dpms 300 300 300
+
+# Svenskt tangentbord
+setxkbmap se
+
+# Jens SXbar
+sxbar &
+exec sxwm
+EOF
+    chmod +x "$HOME/.xinitrc"
+    echo "    ~/.xinitrc skapad med nya inställningar"
+else
+    echo "Lägg manuellt till i ~/.xinitrc:"
+    echo ""
+    echo "# Stänga av skärmarna efter 5 min"
+    echo "xset s 300 300"
+    echo "xset dpms 300 300 300"
+    echo "# Svenskt tangentbord"
+    echo "setxkbmap se"
+    echo "# Jens SXbar"
+    echo "sxbar &"
+    echo "exec sxwm"
+fi
+
+echo ""
+echo "Installation slutförd!"
+
