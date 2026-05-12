@@ -61,6 +61,48 @@ else
 fi
 
 echo ""
+echo "==> Installera ytterligare paket"
+echo ""
+
+# Fråga om Firefox ESR
+read -p "Installera firefox-esr? (j/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Jj]$ ]]; then
+    echo "Installerar firefox-esr..."
+    sudo apt-get install -y firefox-esr
+fi
+
+# Fråga om dmenu
+read -p "Installera dmenu? (j/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Jj]$ ]]; then
+    echo "Installerar dmenu..."
+    sudo apt-get install -y dmenu
+fi
+
+# Fråga om terminal - st eller kitty
+echo ""
+echo "Välj terminal emulator:"
+echo "1) st"
+echo "2) kitty"
+read -p "Val (1 eller 2): " terminal_choice
+
+case $terminal_choice in
+    2)
+        echo "Installerar kitty..."
+        sudo apt-get install -y kitty
+        echo ""
+        echo "⚠️  VIKTIGT: Efter installationen måste du konfigurera kitty"
+        echo "   Redigera konfigfilen: ~/.config/kitty/kitty.conf"
+        echo "   Läs dokumentationen: https://sw.kovidgoyal.net/kitty/conf/"
+        ;;
+    1|*)
+        echo "Installerar st..."
+        sudo apt-get install -y stterm
+        ;;
+esac
+
+echo ""
 echo "==> Konfigurering av ~/.xinitrc"
 echo ""
 
