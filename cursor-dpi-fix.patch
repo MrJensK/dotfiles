@@ -1,0 +1,179 @@
+diff --git a/Makefile b/Makefile
+index 2653a39..46afb75 100644
+--- a/Makefile
++++ b/Makefile
+@@ -6,7 +6,7 @@ PREFIX = /usr/local
+ MANPREFIX = ${PREFIX}/share/man
+ 
+ # libs
+-LIBS = -lX11 -lXinerama -lXcursor
++LIBS = -lX11 -lXinerama -lXrandr -lXcursor
+ 
+ # flags
+ CPPFLAGS = -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=700
+diff --git a/src/sxwm.c b/src/sxwm.c
+index e61953a..2968c8a 100644
+--- a/src/sxwm.c
++++ b/src/sxwm.c
+@@ -30,6 +30,7 @@
+ #include <X11/Xutil.h>
+ 
+ #include <X11/extensions/Xinerama.h>
++#include <X11/extensions/Xrandr.h>
+ #include <X11/Xcursor/Xcursor.h>
+ 
+ #include "defs.h"
+@@ -134,6 +135,7 @@ Bool window_should_float(Window w);
+ Bool window_should_start_fullscreen(Window w);
+ int xerr(Display *d, XErrorEvent *ee);
+ void xev_case(XEvent *xev);
++void load_cursors(void);
+ 
+ static Atom atoms[ATOM_COUNT];
+ static const char *atom_names[ATOM_COUNT] = {
+@@ -174,6 +176,7 @@ static const char *atom_names[ATOM_COUNT] = {
+ Cursor cursor_normal;
+ Cursor cursor_move;
+ Cursor cursor_resize;
++static Bool cursor_size_user_set = False;
+ 
+ Client *workspaces[NUM_WORKSPACES] = {NULL};
+ Config user_config;
+@@ -2215,15 +2218,13 @@ void setup(void)
+ 	grab_keys();
+ 	startup_exec();
+ 
+-	cursor_normal = XcursorLibraryLoadCursor(dpy, "left_ptr");
+-	cursor_move = XcursorLibraryLoadCursor(dpy, "fleur");
+-	cursor_resize = XcursorLibraryLoadCursor(dpy, "bottom_right_corner");
+-	XDefineCursor(dpy, root, cursor_normal);
++	cursor_size_user_set = (getenv("XCURSOR_SIZE") != NULL);
+ 
+ 	scr_width = XDisplayWidth(dpy, DefaultScreen(dpy));
+ 	scr_height = XDisplayHeight(dpy, DefaultScreen(dpy));
+ 
+ 	update_mons();
++	load_cursors();
+ 
+ 	/* select events wm should look for on root */
+ 	Mask wm_masks = StructureNotifyMask | SubstructureRedirectMask | SubstructureNotifyMask |
+@@ -3020,6 +3021,53 @@ void update_modifier_masks(void)
+ 	XFreeModifiermap(mod_mapping);
+ }
+ 
++void load_cursors(void)
++{
++	if (!cursor_size_user_set) {
++		/*
++		 * Xinerama gives no physical mm dimensions, so use RandR to find
++		 * the primary monitor's mheight and compute a correct per-monitor DPI.
++		 * Without this, XcursorLibraryLoadCursor derives DPI from the full
++		 * virtual-screen height (e.g. 2520 px / 167 mm ≈ 2× too large).
++		 */
++		int rr_event_base, rr_err_base;
++		if (XRRQueryExtension(dpy, &rr_event_base, &rr_err_base)) {
++			int n_info;
++			XRRMonitorInfo *info = XRRGetMonitors(dpy, root, True, &n_info);
++			if (info && n_info > 0) {
++				int idx = 0;
++				for (int i = 0; i < n_info; i++) {
++					if (info[i].primary) { idx = i; break; }
++				}
++				if (info[idx].mheight > 0 && info[idx].height > 0) {
++					/*
++					 * cursor_size = DPI * 16 / 96
++					 * DPI = height_px * 25.4 / mheight_mm
++					 * Combined: height_px * 16 * 254 / (mheight_mm * 960)
++					 */
++					int size = info[idx].height * 16 * 254 / (info[idx].mheight * 960);
++					size = MAX(16, (size + 7) & ~7);
++					char buf[16];
++					snprintf(buf, sizeof(buf), "%d", size);
++					setenv("XCURSOR_SIZE", buf, 1);
++				}
++				XRRFreeMonitors(info);
++			}
++		}
++	}
++
++	if (cursor_normal) XFreeCursor(dpy, cursor_normal);
++	if (cursor_move)   XFreeCursor(dpy, cursor_move);
++	if (cursor_resize) XFreeCursor(dpy, cursor_resize);
++
++	cursor_normal = XcursorLibraryLoadCursor(dpy, "left_ptr");
++	cursor_move   = XcursorLibraryLoadCursor(dpy, "fleur");
++	cursor_resize = XcursorLibraryLoadCursor(dpy, "bottom_right_corner");
++
++	for (int s = 0; s < ScreenCount(dpy); s++)
++		XDefineCursor(dpy, RootWindow(dpy, s), cursor_normal);
++}
++
+ void update_mons(void)
+ {
+ 	XineramaScreenInfo *info;
+@@ -3030,12 +3078,13 @@ void update_mons(void)
+ 
+ 	for (int s = 0; s < ScreenCount(dpy); s++) {
+ 		Window scr_root = RootWindow(dpy, s);
+-		XDefineCursor(dpy, scr_root, cursor_normal);
++		if (cursor_normal)
++			XDefineCursor(dpy, scr_root, cursor_normal);
+ 	}
+ 
+ 	if (XineramaIsActive(dpy)) {
+ 		info = XineramaQueryScreens(dpy, &n_mons);
+-		mons = malloc(sizeof *mons * n_mons);
++		mons = calloc(n_mons, sizeof *mons);
+ 		if (!mons) {
+ 			fputs("sxwm: failed to allocate monitors\n", stderr);
+ 			exit(EXIT_FAILURE);
+@@ -3050,7 +3099,7 @@ void update_mons(void)
+ 	}
+ 	else {
+ 		n_mons = 1;
+-		mons = malloc(sizeof *mons);
++		mons = calloc(1, sizeof *mons);
+ 		if (!mons) {
+ 			fputs("sxwm: failed to allocate monitor\n", stderr);
+ 			exit(EXIT_FAILURE);
+@@ -3205,12 +3254,14 @@ void update_struts(void)
+ 					long span_end   = top_end_x;
+ 					if (span_end >= mx && span_start <= mx + mw - 1) {
+ 						/*
+-						 top is distance from root top to reserved area
+-							 mons top is at my, amount eaten:
+-							 reserve_top = MAX(0, top - my)
++						 top is distance from root top to reserved area.
++						 Only apply to monitors whose vertical range contains
++						 the bottom of the reserved strip (top <= my + mh).
++						 Without this, a panel at y=1440 (top of laptop) sets
++						 top=1470 and incorrectly eats the entire ultrawide above.
+ 						 */
+ 						int reserve = (int)MAX(0, top - my);
+-						if (reserve > 0)
++						if (reserve > 0 && top <= (long)(my + mh))
+ 							mons[m].reserve_top = MAX(mons[m].reserve_top, reserve);
+ 					}
+ 				}
+@@ -3220,16 +3271,15 @@ void update_struts(void)
+ 					long span_end   = bot_end_x;
+ 					if (span_end >= mx && span_start <= mx + mw - 1) {
+ 						/*
+-						 bottom is distance from root bottom to reserved area
+-						 global_reserved_top = screen_h - bottom;
+-						 overlap to mon:
+-						   overlap = (my + mh) - global_reserved_top;
+-						   reserve_bottom = MAX(0, overlap)
++						 bottom is distance from root bottom to reserved area.
++						 Only apply to monitors whose vertical range contains
++						 the top of the reserved strip (bottom <= screen_h - my).
++						 Symmetric guard to the top case above.
+ 						 */
+ 						int global_reserved_top = screen_h - (int)bottom;
+ 						int overlap = (my + mh) - global_reserved_top;
+ 						int reserve = MAX(0, overlap);
+-						if (reserve > 0)
++						if (reserve > 0 && (int)bottom <= screen_h - my)
+ 							mons[m].reserve_bottom = MAX(mons[m].reserve_bottom, reserve);
+ 					}
+ 				}
