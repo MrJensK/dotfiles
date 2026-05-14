@@ -1,0 +1,39 @@
+# sxbar configuration
+# Format: key : value
+# Colours accept hex (#rrggbb) or X colour names
+
+# Global settings
+show_version         : false
+version_text         : poop
+
+# Appearance
+height              : 20
+bottom_bar          : false
+vertical_padding    : 5
+horizontal_padding  : 5
+text_padding        : 5
+border              : false
+border_width        : 1
+background_colour   : #000000
+foreground_colour   : #7abccd
+border_colour       : #ffffff
+font                : fixed
+
+# Built-in modules
+# module : name : enabled : refresh_interval_seconds
+# Available: clock, date, battery, volume, cpu
+module : clock   : true  : 1
+module : date    : true  : 60
+module : battery : true : 30
+module : volume  : false  : 5
+module : cpu     : false : 3
+
+# Custom script modules (like polybar exec)
+# Command must be quoted. Output is displayed in the bar.
+# custom : label : "command or script path" : refresh_interval_seconds
+#
+# Examples:
+# custom : temp     : "sensors | grep 'Package' | awk '{print $4}'" : 5
+# custom : mem      : "free -h | awk '/^Mem:/{print $3\"/\"$2}'" : 10
+# custom : network  : "~/.config/sxbar/scripts/network.sh" : 5
+# custom : updates  : "checkupdates | wc -l | tr -d ' '" : 300
