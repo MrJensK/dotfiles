@@ -23,7 +23,11 @@ sudo apt-get install -y \
     kitty \
     pipewire-audio \
     alsa-utils \
-    patch
+    patch \
+    wget \
+    unzip \
+    fontconfig \
+    cargo
 
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
@@ -101,6 +105,24 @@ else
     echo "  setxkbmap se"
     echo "  exec sxwm"
 fi
+
+echo "==> Bygger och installerar bluetui..."
+rm -rf "$BUILD_DIR/bluetui"
+git clone --depth=1 https://github.com/pythops/bluetui "$BUILD_DIR/bluetui"
+cd "$BUILD_DIR/bluetui"
+cargo build --release
+sudo cp target/release/bluetui /usr/local/bin/
+cd "$BUILD_DIR"
+
+echo "==> Installerar JetBrainsMono Nerd Font..."
+FONT_DIR="$HOME/.local/share/fonts/JetBrainsMono"
+mkdir -p "$FONT_DIR"
+FONT_URL="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip"
+wget -q --show-progress -O /tmp/JetBrainsMono.zip "$FONT_URL"
+unzip -o /tmp/JetBrainsMono.zip -d "$FONT_DIR" '*.ttf'
+rm /tmp/JetBrainsMono.zip
+fc-cache -f
+echo "    JetBrainsMono Nerd Font installerad"
 
 echo "==> Konfigurerar autostart av X på TTY1..."
 BASH_PROFILE="$HOME/.bash_profile"
