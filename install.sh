@@ -20,7 +20,10 @@ sudo apt-get install -y \
     xinit \
     firefox-esr \
     dmenu \
-    kitty
+    kitty \
+    pipewire-audio \
+    alsa-utils \
+    patch
 
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
@@ -86,7 +89,6 @@ xset dpms 300 300 300
 # Svenskt tangentbord
 setxkbmap se
 
-# Jens SXbar
 exec sxwm
 EOF
     chmod +x "$HOME/.xinitrc"
@@ -99,6 +101,20 @@ else
     echo "  setxkbmap se"
     echo "  exec sxwm"
 fi
+
+echo "==> Konfigurerar autostart av X på TTY1..."
+BASH_PROFILE="$HOME/.bash_profile"
+AUTOSTART='if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then exec startx; fi'
+if grep -qF 'exec startx' "$BASH_PROFILE" 2>/dev/null; then
+    echo "    ~/.bash_profile redan konfigurerad, hoppar över"
+else
+    echo "" >> "$BASH_PROFILE"
+    echo "$AUTOSTART" >> "$BASH_PROFILE"
+    echo "    ~/.bash_profile uppdaterad"
+fi
+
+echo "==> Aktiverar PipeWire..."
+systemctl --user enable --now pipewire pipewire-pulse wireplumber
 
 echo ""
 echo "Installation slutförd!"
