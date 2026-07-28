@@ -4,6 +4,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SXWM_REPO="https://github.com/uint23/sxwm.git"
 SXBAR_REPO="https://github.com/MrJensK/sxbar.git"
+DMENU_REPO="https://github.com/MrJensK/dmenu.git"
 BUILD_DIR="/tmp/sxwm-sxbar-build"
 
 echo "==> Installerar beroenden..."
@@ -19,7 +20,6 @@ sudo apt-get install -y \
     xorg \
     xinit \
     firefox-esr \
-    dmenu \
     kitty \
     pipewire-audio \
     alsa-utils \
@@ -51,6 +51,16 @@ git clone --depth=1 "$SXBAR_REPO" sxbar
 
 echo "==> Bygger och installerar sxbar..."
 cd sxbar
+make
+sudo make install
+cd "$BUILD_DIR"
+
+echo "==> Klonar dmenu..."
+rm -rf dmenu
+git clone --depth=1 "$DMENU_REPO" dmenu
+
+echo "==> Bygger och installerar dmenu..."
+cd dmenu
 make
 sudo make install
 cd "$BUILD_DIR"
