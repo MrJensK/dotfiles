@@ -25,9 +25,9 @@ sudo apt-get install -y \
     alsa-utils \
     patch \
     wget \
+    curl \
     unzip \
     fontconfig \
-    cargo
 
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
@@ -56,22 +56,23 @@ sudo make install
 cd "$BUILD_DIR"
 
 echo "==> Kopierar konfigfiler..."
-mkdir -p "$HOME/.config/kitty"
+mkdir -p "$HOME/.config/kitty" "$HOME/.config/sxbar"
 
 copy_config() {
     local src="$SCRIPT_DIR/config/$1"
-    local dst="$HOME/.config/$1"
+    local dst="$HOME/.config/$2"
+    mkdir -p "$(dirname "$dst")"
     if [ -f "$dst" ]; then
         cp "$dst" "$dst.bak"
-        echo "    $1 -> backup sparad: ~/.config/$1.bak"
+        echo "    $2 -> backup sparad: ~/.config/$2.bak"
     fi
     cp "$src" "$dst"
-    echo "    $1 -> ~/.config/$1"
+    echo "    $2 -> ~/.config/$2"
 }
 
-copy_config sxwmrc
-copy_config sxbarc
-copy_config kitty/kitty.conf
+copy_config sxwmrc sxwmrc
+copy_config sxbarc sxbar/sxbarc
+copy_config kitty/kitty.conf kitty/kitty.conf
 
 echo ""
 echo "==> Konfigurering av ~/.xinitrc"
@@ -105,6 +106,20 @@ else
     echo "  setxkbmap se"
     echo "  exec sxwm"
 fi
+
+echo "==> Tar bort ev. gammal rustc/cargo från apt (Debian har ofta för gammal version)..."
+RUST_APT_PKGS=$(dpkg-query -W -f='${Package}\n' 'rustc' 'cargo' 'libstd-rust-dev' 'rust-llvm' 'libstd-rust-*' 2>/dev/null || true)
+if [ -n "$RUST_APT_PKGS" ]; then
+    sudo apt-get purge -y $RUST_APT_PKGS
+    sudo apt-get autoremove --purge -y
+fi
+
+echo "==> Installerar rustup..."
+if ! command -v rustup >/dev/null 2>&1 && [ ! -x "$HOME/.cargo/bin/rustup" ]; then
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+fi
+# shellcheck disable=SC1091
+source "$HOME/.cargo/env"
 
 echo "==> Bygger och installerar bluetui..."
 rm -rf "$BUILD_DIR/bluetui"

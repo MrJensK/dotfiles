@@ -17,16 +17,39 @@ border_width        : 1
 background_colour   : #000000
 foreground_colour   : #7abccd
 border_colour       : #ffffff
-font                : fixed
+font                : JetBrainsMono Nerd Font:size=10
 
 # Built-in modules
 # module : name : enabled : refresh_interval_seconds
 # Available: clock, date, battery, volume, cpu
-module : clock   : true  : 1
-module : date    : true  : 60
+module : clock   : true : 1
+module : date    : true : 60
 module : battery : true : 30
-module : volume  : false  : 5
-module : cpu     : false : 3
+module : volume  : true : 5
+module : cpu     : true : 3
+
+# Prefix/icon shown before a module's output (needs a Nerd Font, see `font` above)
+# prefix : module_name : "icon "
+prefix : clock   : " "
+prefix : date    : " "
+prefix_cmd : battery : "~/.config/sxbar/scripts/battery_icon.sh"
+prefix_cmd : volume  : "~/.config/sxbar/scripts/volume_icon.sh"
+prefix     : cpu     : " "
+
+# Reserve a fixed pixel width per module so the rest of the bar doesn't
+# shift when a value's digit count changes (e.g. cpu: 9% -> 16%).
+# width : module_name : min_pixels
+# 48px covers icon + " " + up to "100%" in JetBrainsMono Nerd Font:size=10.
+width : battery : 48
+width : volume  : 48
+width : cpu     : 48
+
+
+colour : clock   : #50fa7b
+colour : volume  : #ff79c6
+colour : battery : #ffb86c
+colour : date    : #8be9fd
+
 
 # Custom script modules (like polybar exec)
 # Command must be quoted. Output is displayed in the bar.
