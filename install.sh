@@ -13,16 +13,21 @@ sudo apt-get install -y \
     git \
     make \
     gcc \
+    build-essential \
+    pkg-config \
     libx11-dev \
     libxinerama-dev \
     libxrandr-dev \
     libxcursor-dev \
+    libxft-dev \
+    libfontconfig1-dev \
     xorg \
     xinit \
     firefox-esr \
     kitty \
     pipewire-audio \
     alsa-utils \
+    bluez \
     patch \
     wget \
     curl \
@@ -84,6 +89,11 @@ copy_config sxwmrc sxwmrc
 copy_config sxbarc sxbar/sxbarc
 copy_config kitty/kitty.conf kitty/kitty.conf
 
+echo "==> Kopierar skrivbordsbakgrund..."
+mkdir -p "$HOME/BG"
+cp -n "$SCRIPT_DIR/BG/"* "$HOME/BG/"
+echo "    BG/ -> ~/BG/"
+
 echo ""
 echo "==> Konfigurering av ~/.xinitrc"
 echo ""
@@ -101,6 +111,9 @@ if [[ $REPLY =~ ^[Jj]$ ]]; then
 xset s 300 300
 xset dpms 300 300 300
 
+# Stäng av pip-ljudet (bell)
+xset b off
+
 # Svenskt tangentbord
 setxkbmap se
 
@@ -116,6 +129,10 @@ else
     echo "  setxkbmap se"
     echo "  exec sxwm"
 fi
+
+echo "==> Stänger av PC-speaker beep..."
+echo "blacklist pcspkr" | sudo tee /etc/modprobe.d/nobeep.conf > /dev/null
+sudo rmmod pcspkr 2>/dev/null || true
 
 echo "==> Tar bort ev. gammal rustc/cargo från apt (Debian har ofta för gammal version)..."
 RUST_APT_PKGS=$(dpkg-query -W -f='${Package}\n' 'rustc' 'cargo' 'libstd-rust-dev' 'rust-llvm' 'libstd-rust-*' 2>/dev/null || true)
