@@ -1,0 +1,31 @@
+diff --git a/src/sxwm.c b/src/sxwm.c
+index 55fe97b..d25d872 100644
+--- a/src/sxwm.c
++++ b/src/sxwm.c
+@@ -1009,6 +1009,26 @@ void hdl_client_msg(XEvent *xev)
+ 		}
+ 		return;
+ 	}
++
++	if (xev->xclient.message_type == atoms[ATOM_NET_ACTIVE_WINDOW]) {
++		/* external activation request (pagers/taskbars, e.g. `wmctrl -a`)
++		 * -- _NET_ACTIVE_WINDOW is advertised in _NET_SUPPORTED and we
++		 * already publish it read-only to reflect our own focus, but
++		 * nothing accepted requests to change it until now. Switch to
++		 * the client's workspace first if it's not the current one, same
++		 * as a pager would expect, then focus/raise it exactly like
++		 * focus_next/focus_prev do. */
++		XClientMessageEvent *client_msg_ev = &xev->xclient;
++		Window w = client_msg_ev->window;
++		Client *c = find_client(find_toplevel(w));
++		if (!c)
++			return;
++
++		if (c->ws != current_ws)
++			change_workspace(c->ws);
++		set_input_focus(c, True, True);
++		return;
++	}
+ }
+ 
+ void hdl_config_ntf(XEvent *xev)

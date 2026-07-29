@@ -33,6 +33,7 @@ sudo apt-get install -y \
     curl \
     unzip \
     fontconfig \
+    wmctrl \
 
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
@@ -41,9 +42,13 @@ echo "==> Klonar sxwm..."
 rm -rf sxwm
 git clone --depth=1 "$SXWM_REPO" sxwm
 
-echo "==> Applicerar sxwm-patch..."
+echo "==> Applicerar sxwm-patchar..."
 cd sxwm
 patch -p1 < "$SCRIPT_DIR/cursor-dpi-fix.patch"
+# Lägger till stöd för _NET_ACTIVE_WINDOW (behövs för sxbars taskbar-modul
+# -- utan denna gör klick i taskbaren ingenting, sxwm har ingen annan
+# extern mekanism för att fokusera ett specifikt fönster)
+patch -p1 < "$SCRIPT_DIR/net-active-window.patch"
 
 echo "==> Bygger och installerar sxwm..."
 make
